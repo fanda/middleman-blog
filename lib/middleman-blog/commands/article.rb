@@ -25,17 +25,19 @@ module Middleman
       desc "article TITLE", "Create a new blog article"
       method_option "date",
         :aliases => "-d",
-        :desc => "The date to create the post with (defaults to now)"      
+        :desc => "The date to create the post with (defaults to now)"
       def article(title)
         shared_instance = ::Middleman::Application.server.inst
 
         # This only exists when the config.rb sets it!
         if shared_instance.respond_to? :blog
+          @category = options[:cat]||''
           @title = title
           @slug = title.parameterize
           @date = options[:date] ? Time.zone.parse(options[:date]) : Time.zone.now
 
           article_path = shared_instance.blog.options.sources.
+            sub(':cat', @category).
             sub(':year', @date.year.to_s).
             sub(':month', @date.month.to_s.rjust(2,'0')).
             sub(':day', @date.day.to_s.rjust(2,'0')).

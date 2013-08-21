@@ -10,7 +10,7 @@ module Middleman
         # @param [String] tag
         # @return [String]
         def link(blog_options, tag)
-          ::Middleman::Util.normalize_path(blog_options.taglink.sub(':tag', tag.parameterize))
+          ::Middleman::Util.normalize_path(blog_options.taglink.sub(':tag', tag))
         end
       end
 
@@ -34,13 +34,13 @@ module Middleman
           @app.blog.options
         end
       end
-      
+
       # Update the main sitemap resource list
       # @return [void]
       def manipulate_resource_list(resources)
         resources + self.blog_data.tags.map do |tag, articles|
           path = TagPages.link(self.blog_options, tag)
-          
+
           p = ::Middleman::Sitemap::Resource.new(
             @app.sitemap,
             path

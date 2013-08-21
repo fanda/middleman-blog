@@ -7,7 +7,7 @@ module Middleman
       # A regex for matching blog article source paths
       # @return [Regex]
       attr_reader :path_matcher
-      
+
       # A hash of indexes into the path_matcher captures
       # @return [Hash]
       attr_reader :matcher_indexes
@@ -26,9 +26,10 @@ module Middleman
 
         # A list of resources corresponding to blog articles
         @_articles = []
-        
+
         matcher = Regexp.escape(options.sources).
             sub(/^\//, "").
+            gsub(":cat",   "(\\w+\/?\\w*)").
             gsub(":year",  "(\\d{4})").
             gsub(":month", "(\\d{2})").
             gsub(":day",   "(\\d{2})").
@@ -41,7 +42,7 @@ module Middleman
 
         # Build a hash of part name to capture index, e.g. {"year" => 0}
         @matcher_indexes = {}
-        options.sources.scan(/:year|:month|:day|:title/).
+        options.sources.scan(/:cat|:year|:month|:day|:title/).
           each_with_index do |key, i|
             @matcher_indexes[key[1..-1]] = i
           end
@@ -72,7 +73,12 @@ module Middleman
       def tags
         tags = {}
         @_articles.each do |article|
-          article.tags.each do |tag|
+          cats=[]
+          article.tags.each_with_index {|t,i|
+            cats << article.tags[0..i].join('/')
+          }
+
+          cats.each do |tag|
             tags[tag] ||= []
             tags[tag] << article
           end
@@ -92,8 +98,11 @@ module Middleman
         @_articles = []
         used_resources = []
 
+
         resources.each do |resource|
-          if resource.path =~ path_matcher
+
+
+          if resource.path =~ @path_matcher
             resource.extend BlogArticle
 
             if @controller
@@ -102,14 +111,19 @@ module Middleman
 
             # Skip articles that are not published (in non-development environments)
             next unless @app.environment == :development || resource.published?
-
             # compute output path:
             #   substitute date parts to path pattern
+            begin
             resource.destination_path = options.permalink.
+              sub(':cat', resource.category).
+              sub(':title', resource.slug).
               sub(':year', resource.date.year.to_s).
               sub(':month', resource.date.month.to_s.rjust(2,'0')).
-              sub(':day', resource.date.day.to_s.rjust(2,'0')).
-              sub(':title', resource.slug)
+              sub(':day', resource.date.day.to_s.rjust(2,'0'))
+            rescue
+              next
+            end
+
 
             resource.destination_path = Middleman::Util.normalize_path(resource.destination_path)
 
@@ -119,6 +133,7 @@ module Middleman
             match = $~.captures
 
             article_path = options.sources.
+              sub(':cat', match[@matcher_indexes["cat"]]).
               sub(':year', match[@matcher_indexes["year"]]).
               sub(':month', match[@matcher_indexes["month"]]).
               sub(':day', match[@matcher_indexes["day"]]).
@@ -134,18 +149,20 @@ module Middleman
             # The subdir path is the article path with the index file name
             # or file extension stripped off.
             resource.destination_path = options.permalink.
+              sub(':cat', article.category).
               sub(':year', article.date.year.to_s).
               sub(':month', article.date.month.to_s.rjust(2,'0')).
               sub(':day', article.date.day.to_s.rjust(2,'0')).
               sub(':title', article.slug).
               sub(/(\/#{@app.index_file}$)|(\.[^.]+$)|(\/$)/, match[@matcher_indexes["path"]])
 
+
             resource.destination_path = Middleman::Util.normalize_path(resource.destination_path)
           end
 
           used_resources << resource
         end
-        
+
         used_resources
       end
     end

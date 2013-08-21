@@ -167,18 +167,14 @@ module Middleman
         raise "Blog post #{path} needs a date in its filename or frontmatter" unless @_date
 
         @_date
+      rescue
+        return Time.zone.now
       end
 
       # The "slug" of the article that shows up in its URL.
       # @return [String]
       def slug
-        @_slug ||= data["slug"]
-
-        @_slug ||= if blog_options.sources.include?(":title")
-          path_part("title")
-        else
-          title.parameterize
-        end
+        @_slug ||= path_part("title")
       end
 
       # The previous (chronologically earlier) article before this one
@@ -193,6 +189,11 @@ module Middleman
       # @return [Middleman::Sitemap::Resource]
       def next_article
         blog_data.articles.reverse.find {|a| a.date > self.date }
+      end
+
+
+      def category
+        path_part("cat")||'unk'
       end
     end
   end
